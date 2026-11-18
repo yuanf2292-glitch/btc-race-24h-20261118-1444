@@ -47,6 +47,12 @@ better behaviour on edge cases — dev score UNCHANGED:
   further ~45 bps after entry before rebounding — that rule stops the
   winner out at a loss); tightening entry to two up minutes (r5 has
   decayed to -26 bps by then — trade gone).
+- **Chaos filter (second edit):** entry is skipped while 1-minute
+  sigma >= 20 bps (3x the dev window's 6.7 bps baseline). In such a
+  regime a -80 bps 5-minute drop is ordinary chop, not a tail event.
+  The dev trade fired at sigma 11.25, so this does not change the dev
+  result; it exists for chaotic race days. Re-verified after adding:
+  still +7.269321 USDC, 2 trades, dev gate PASS.
 - Local grade after v2: **net PnL +7.269321 USDC, 2 filled orders
   (1 round trip: buy seq 66, sell seq 80), win rate 1.0, max
   drawdown 0.00319, fees 0.581025 USDC, guardrails met, dev gate

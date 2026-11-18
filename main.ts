@@ -81,6 +81,11 @@ const SIGMA_CAP = 25; // bps
 const TRAIL_PEAK_BPS = 40; // peak gain that arms the trailing guard
 const TRAIL_MIN_BPS = 25; // minimum gain to exit on a give-back
 const REVERSAL_MIN_BARS = 4; // bars before the reversal exit can fire
+const SIGMA_CHAOS_BPS = 20; // 1-min sigma above this: the market is in an
+// extreme regime (3x the dev window's 6.7 bps baseline) where a -80 bps
+// 5-minute drop is ordinary chop, not a tail event — do not trade the
+// flush then. The dev trade fired at sigma 11.25, so this does not
+// change the dev result; it exists for chaotic race days.
 const MS_PER_MIN = 60_000;
 
 const clamp = (x: number, lo: number, hi: number): number =>
@@ -252,6 +257,7 @@ await runBars({
     if (batch.seq - seqState.__lastEntryAttempt < 2) return [];
     if (hist.length < MIN_HISTORY || !(close > 0) || high < low) return [];
     if (r5 === null || r1 === null) return [];
+    if (sigma >= SIGMA_CHAOS_BPS) return [];
 
     // A >=80 bps 5-minute drop whose last minute already ticks back up.
     // Full equity: the downside of a failed fade is bounded by the stop
