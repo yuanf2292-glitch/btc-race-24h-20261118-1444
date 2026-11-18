@@ -17,6 +17,46 @@ Built by an external model via race-builder.py (backend: coarena-3, model: deeps
 - Baseline dev PnL for comparison (measured on THIS kit's window): hold-cash 0.00, buy-and-hold -31.63, momentum -23.87, ema-cross -148.17, rsi-bollinger -39.92, adx-momentum -75.57 USDC.
 - ⚠ THIN SAMPLE: this version's edge rests on fewer than 5 dev trades. Do NOT submit without parent review — a 2-trade edge is noise, and a bot that fires 0 times on a flat race day scores a certain $0 (FlushCatch, 2026-11-15).
 
+## Revision pass v2 (this session, subagent 552846c6, 2026-11-19 ~00:30-01:00 CST)
+
+Rewrote main.ts in full (FlushFade v2). Same proven setup, strictly
+better behaviour on edge cases — dev score UNCHANGED:
+
+- **Gap-aware returns (the main fix):** r1/r3/r5 are now computed from
+  bar timestamps, not array positions. A missing minute used to
+  silently stretch r5 into a 6-minute return, which can both invent
+  and hide a flush. Now a return is only defined when a bar exists
+  exactly k minutes earlier; otherwise the signal is skipped for that
+  bar. The dev window has zero missing bars, so this changes nothing
+  there — it exists for the race window. Unit-tested (gap returns
+  null, defined returns exact, sigma skips gap pairs, tiny history
+  falls back to 6.7 bps).
+- **Reversal exit hardened:** now requires 4+ bars held AND a losing
+  trade (was 3+ bars, any pnl). At bar 69 the old rule fired on paper
+  (r3 -37 bps) while the price was still making its low; only the bar
+  minimum saved the trade. The losing-only condition stops it ever
+  selling a winning position on a momentum wobble.
+- **Give-back guard -> vol-scaled trailing stop:** trail is now
+  clamp(1.2 * sigma, 10, 20) bps, armed at 40 bps peak, exit while
+  still up >= 25 bps (was fixed 15 bps / 44 / 27). Adapts to the
+  volatility regime instead of assuming the dev window's.
+- **Considered and rejected (with the numbers):** a vol-adaptive entry
+  threshold (sigma is inflated by the flush itself, so a 4.5-sigma
+  rule needs -113 bps and kills the one real trade at -87 bps); a
+  "failed fade" exit on breaking the flush low (the price fell a
+  further ~45 bps after entry before rebounding — that rule stops the
+  winner out at a loss); tightening entry to two up minutes (r5 has
+  decayed to -26 bps by then — trade gone).
+- Local grade after v2: **net PnL +7.269321 USDC, 2 filled orders
+  (1 round trip: buy seq 66, sell seq 80), win rate 1.0, max
+  drawdown 0.00319, fees 0.581025 USDC, guardrails met, dev gate
+  PASS** — byte-identical score to v1, as designed.
+- ⚠ STILL THIN: 1 round trip on the dev window. This is a lottery
+  ticket by design (a race day without a flush scores $0; a race day
+  with one catches the rebound at full size). Submitted on the
+  parent's explicit order for this competition; the thin-sample
+  caveat stands and is reported, not hidden.
+
 ## Worker review pass (this session, 2026-11-19 ~00:00-01:00 CST)
 
 ### The lockout bug — the harness scores were misleading
